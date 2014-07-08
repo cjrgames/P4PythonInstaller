@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import copy
-import ftplib
 import os
 import platform
 import re
@@ -9,7 +8,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
-
+import httplib
 
 p4api_version = "14.1"
 
@@ -20,18 +19,20 @@ p4python_path = "%s/bin.tools" % perforce_path
 
 def download(paths):
     """
-    Downloads files from the Perforce FTP server.
+    Downloads files from the Perforce FTP server over HTTP
     """
-    ftp = ftplib.FTP(perforce_hostname)
-    ftp.login()
+    conn = httplib.HTTPConnection(perforce_hostname)
 
     for path in paths:
         filename = path.rsplit("/", 1)[1]
         print "Downloading %s..." % filename
-        ftp.retrbinary("RETR %s" % path,
-                       open(filename, "wb").write)
+        conn.request("GET",path)
+        res = conn.getresponse()
+        print res.status, res.reason
+        if res.status == 200:
+            open(filename, "wb").write(res.read())
 
-    ftp.quit()
+    conn.close()
 
 
 def extract(filename):
